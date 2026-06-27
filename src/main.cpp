@@ -13,12 +13,12 @@
 
 typedef bool (*GlossInit_t)(bool);
 typedef void* (*pl_resolve_signature_t)(const char*, const char*);
-typedef int (*GlossHookFunction_t)(void*, void*, void**);
+typedef int (*GlossHook_t)(void*, void*, void**);
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay, EGLSurface);
 
 GlossInit_t pGlossInit = nullptr;
 pl_resolve_signature_t pResolve = nullptr;
-GlossHookFunction_t pGlossHook = nullptr;
+GlossHook_t pGlossHook = nullptr;
 eglSwapBuffers_t pOrigSwapBuffers = nullptr;
 
 static bool imguiInitialized = false;
@@ -91,8 +91,7 @@ void init() {
 
     pGlossInit = (GlossInit_t)dlsym(preloader, "GlossInit");
     pResolve = (pl_resolve_signature_t)dlsym(preloader, "pl_resolve_signature");
-    pGlossHook = (GlossHookFunction_t)dlsym(preloader, "GlossHookFunction");
-
+    pGlossHook = (GlossHook_t)dlsym(preloader, "GlossHook");
     if (!pGlossInit) {
         LOGI("Failed get GlossInit!");
         return;
