@@ -54,13 +54,11 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
     ImGui::NewFrame();
 
     // DayCounter window
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::Begin("##dc", nullptr,
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_AlwaysAutoResize);
+    ImVec4 goldColor = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
+    ImVec4 whiteColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    ImGui::TextColored(goldColor, "DAY 1");
+    ImGui::TextColored(whiteColor, "X: 0 Y: 64 Z: 0");
+    ImGui::TextColored(whiteColor, "06:00");
 
     // Get day from MCBE (placeholder dulu)
     ImGui::TextColored
