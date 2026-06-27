@@ -1,0 +1,9 @@
+{
+  "type": "preload-native",
+  "name": "DayCounter",
+  "description": "Shows XYZ coordinates, day and time",
+  "entry": "libdaycounter.so",
+  "author": "zaxeonking",
+  "icon": "",
+  "version": "1.0.0"
+}
