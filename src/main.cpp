@@ -54,11 +54,63 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
     ImGui::NewFrame();
 
     // DayCounter window
-    ImVec4 goldColor = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
-    ImVec4 whiteColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-    ImGui::TextColored(goldColor, "DAY 1");
-    ImGui::TextColored(whiteColor, "X: 0 Y: 64 Z: 0");
-    ImGui::TextColored(whiteColor, "06:00");
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.5f);
+    ImGui::Begin("##dc", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_AlwaysAutoResize);
 
     // Get day from MCBE (placeholder dulu)
-    ImGui::TextColored
+    ImGui::TextColored(ImVec4(1,0.8f,0,1), "DAY 1");
+    ImGui::TextColored(ImVec4(1,1,1,1), "X: 0 Y: 64 Z: 0");
+    ImGui::TextColored(ImVec4(1,1,1,1), "06:00");
+
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    return pOrigSwapBuffers(display, surface);
+}
+
+__attribute__((constructor))
+void init() {
+    LOGI("=== DayCounter LOADING ===");
+
+    void* preloader = dlopen("libpreloader.so", RTLD_NOW);
+    if (!preloader) {
+        LOGI("preloader FAILED: %s", dlerror());
+        return;
+    }
+
+    pGlossInit = (GlossInit_t)dlsym(preloader, "GlossInit");
+    pResolve = (pl_resolve_signature_t)dlsym(preloader, "pl_resolve_signature");
+    pGlossHook = (GlossHookFunction_t)dlsym(preloader, "GlossHookFunction");
+
+    if (!pGlossInit) {
+        LOGI("Failed get GlossInit!");
+        return;
+    }
+
+    pGlossInit(false);
+
+    void* egl = dlopen("libEGL.so", RTLD_NOW);
+    if (!egl) {
+        LOGI("libEGL FAILED: %s", dlerror());
+        return;
+    }
+
+    void* swapFunc = dlsym(egl, "eglSwapBuffers");
+    if (!swapFunc) {
+        LOGI("eglSwapBuffers not found!");
+        return;
+    }
+
+    if (pGlossHook) {
+        int result = pGlossHook(swapFunc, (void*)mySwapBuffers, (void**)&pOrigSwapBuffers);
+        LOGI("Hook result: %d", result);
+    }
+
+    LOGI("=== DayCounter LOADED ===");
+}
