@@ -24,6 +24,7 @@ eglSwapBuffers_t pOrigSwapBuffers = nullptr;
 static bool imguiInitialized = false;
 static int screenW = 1080;
 static int screenH = 1920;
+static int frameCount = 0;
 
 void initImGui() {
     if (imguiInitialized) return;
@@ -38,38 +39,42 @@ void initImGui() {
 }
 
 EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
-    // Get screen size
+    frameCount++;
+
     EGLint w, h;
     eglQuerySurface(display, surface, EGL_WIDTH, &w);
     eglQuerySurface(display, surface, EGL_HEIGHT, &h);
     screenW = w; screenH = h;
 
-    initImGui();
+    if (frameCount > 60 && !imguiInitialized) {
+        initImGui();
+    }
 
-    // Render ImGui
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2(w, h);
+    if (imguiInitialized) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(w, h);
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui::NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui::NewFrame();
 
-    // DayCounter window
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::Begin("##dc", nullptr,
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.5f);
+        ImGui::Begin("##dc", nullptr,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_AlwaysAutoResize);
 
-    // Get day from MCBE (placeholder dulu)
-    ImGui::TextColored(ImVec4(1,0.8f,0,1), "DAY 1");
-    ImGui::TextColored(ImVec4(1,1,1,1), "X: 0 Y: 64 Z: 0");
-    ImGui::TextColored(ImVec4(1,1,1,1), "06:00");
+        ImVec4 gold = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
+        ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImGui::TextColored(gold, "DAY 1");
+        ImGui::TextColored(white, "X: 0 Y: 64 Z: 0");
+        ImGui::TextColored(white, "06:00");
 
-    ImGui::End();
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
 
     return pOrigSwapBuffers(display, surface);
 }
