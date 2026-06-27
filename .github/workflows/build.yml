@@ -17,6 +17,15 @@ jobs:
         unzip -q android-ndk-r26b-linux.zip
         echo "NDK_PATH=$PWD/android-ndk-r26b" >> $GITHUB_ENV
 
+     - name: Get ImGui
+      run: |
+        git clone https://github.com/ocornut/imgui.git --depth=1
+        mkdir -p imgui_src
+        cp imgui/*.h imgui_src/
+        cp imgui/*.cpp imgui_src/
+        cp imgui/backends/imgui_impl_opengl3.h imgui_src/
+        cp imgui/backends/imgui_impl_opengl3.cpp imgui_src/
+
     - name: Build
       run: |
         mkdir -p build/libs
