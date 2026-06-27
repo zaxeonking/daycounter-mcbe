@@ -3,7 +3,6 @@ project(daycounter)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Preloader library
 add_library(preloader SHARED IMPORTED)
 set_target_properties(preloader PROPERTIES
     IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/libpreloader.so)
