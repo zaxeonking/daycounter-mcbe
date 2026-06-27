@@ -29,8 +29,16 @@ jobs:
           -DANDROID_STL=c++_shared
         make
 
+    - name: Package
+      run: |
+        mkdir -p package
+        cp build/libdaycounter.so package/
+        cp manifest.json package/
+        cd package
+        zip -r ../DayCounter.zip .
+
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: libdaycounter
-        path: build/libdaycounter.so
+        name: DayCounter
+        path: DayCounter.zip
