@@ -58,21 +58,23 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
 
         float scale = 3.5f;
 
-        char fullText[128];
-        snprintf(fullText, sizeof(fullText),
+        // Hitung total lebar teks buat centering
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp),
             "XYZ: %.0f, %.0f, %.0f  |  DAY: %d  [%02d:%02d]",
             px, py, pz, day, hours, minutes);
 
-        float textW = ImGui::CalcTextSize(fullText).x * scale;
-        float textH = ImGui::CalcTextSize(fullText).y * scale;
-
+        float textH = ImGui::CalcTextSize("A").y * scale;
         float barHeight = h * 0.085f;
-        float survivalHeight = h * 0.05f;
+        float survivalHeight = h * 0.085f; // naik lebih tinggi
         float posY = h - barHeight - survivalHeight - textH - 5;
 
+        // Pake ImDrawList buat render teks dengan warna berbeda
         ImGui::SetNextWindowPos(ImVec2(0, posY), ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::SetNextWindowSize(ImVec2(w, textH + 10));
+        ImGui::SetNextWindowSize(ImVec2(w, textH + 20));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("##dc", nullptr,
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoResize |
@@ -80,17 +82,38 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
             ImGuiWindowFlags_NoScrollbar |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoInputs |
-            ImGuiWindowFlags_NoBringToFrontOnFocus);
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoDecoration);
 
         ImGui::SetWindowFontScale(scale);
 
         ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+        ImVec4 white  = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        ImGui::SetCursorPosX((w - textW) / 2.0f);
-        ImGui::TextColored(yellow, "%s", fullText);
+        // Hitung total width buat centering
+        float wXYZ    = ImGui::CalcTextSize("XYZ:").x;
+        float wCoord  = ImGui::CalcTextSize(" 100, 64, -200  |  ").x;
+        float wDAY    = ImGui::CalcTextSize("DAY:").x;
+        float wDayVal = ImGui::CalcTextSize(" 5  ").x;
+        float wTime   = ImGui::CalcTextSize("[14:30]").x;
+        float totalW  = (wXYZ + wCoord + wDAY + wDayVal + wTime) * scale;
+
+        float startX = (w - totalW) / 2.0f;
+        ImGui::SetCursorPosX(startX);
+
+        ImGui::TextColored(yellow, "XYZ:");
+        ImGui::SameLine(0, 2);
+        ImGui::TextColored(white, "%.0f, %.0f, %.0f  |  ", px, py, pz);
+        ImGui::SameLine(0, 2);
+        ImGui::TextColored(yellow, "DAY:");
+        ImGui::SameLine(0, 2);
+        ImGui::TextColored(white, "%d  ", day);
+        ImGui::SameLine(0, 2);
+        ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
 
         ImGui::SetWindowFontScale(1.0f);
         ImGui::End();
+        ImGui::PopStyleVar(2);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
