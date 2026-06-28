@@ -16,10 +16,7 @@ typedef void* (*pl_resolve_signature_t)(const char*, const char*);
 typedef int (*GlossHook_t)(void*, void*, void**);
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay, EGLSurface);
 
-// Type definitions untuk MCBE functions
-typedef struct {
-    float x, y, z;
-} Vec3;
+typedef struct { float x, y, z; } Vec3;
 
 typedef int (*GetDayCount_t)(void*);
 typedef int (*GetDayTime_t)(void*);
@@ -59,8 +56,6 @@ void initMCBEFunctions() {
         LOGI("libminecraftpe open failed");
         return;
     }
-
-    // Try cari fungsi pake nama (ini nama C++ yang di-mangle)
     pGetDayCount = (GetDayCount_t)dlsym(mcbe, "_ZN5Level9getDayCountEv");
     pGetDayTime = (GetDayTime_t)dlsym(mcbe, "_ZN5Level8getDayTimeEv");
     pGetPlayerPos = (GetPlayerPos_t)dlsym(mcbe, "_ZN11LocalPlayer6getPosEv");
@@ -87,8 +82,7 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(w, h);
 
-        // Hanya render saat fullscreen (di world)
-        bool isInWorld = (w >= 1080 && h >= 1920);
+        bool isInWorld = true;
 
         if (isInWorld) {
             ImGui_ImplOpenGL3_NewFrame();
@@ -107,24 +101,16 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
 
             ImGui::SetWindowFontScale(2.0f);
 
-            // Get data from MCBE
             int day = 1;
             int daytime = 6000;
             float px = 0, py = 64, pz = 0;
 
-            if (pGetDayCount && gLevel) {
-                day = pGetDayCount(gLevel);
-            }
+            if (pGetDayCount && gLevel) day = pGetDayCount(gLevel);
+            if (pGetDayTime && gLevel) daytime = pGetDayTime(gLevel);
 
-            if (pGetDayTime && gLevel) {
-                daytime = pGetDayTime(gLevel);
-            }
-
-            // Convert daytime to hours:minutes
             int hours = (daytime / 1000) % 24;
-            int minutes = ((daytime % 1000) / 1000) * 60;
+            int minutes = ((daytime % 1000) * 60) / 1000;
 
-            // Format text
             char dayText[32];
             char coordText[64];
             char timeText[32];
@@ -138,7 +124,6 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
             ImGui::TextColored(white, "%s", timeText);
 
             ImGui::SetWindowFontScale(1.0f);
-
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
