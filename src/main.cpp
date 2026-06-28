@@ -49,6 +49,11 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(w, h);
 
+        // Hanya tampil saat landscape (in-game)
+        if (w <= h) {
+            return pOrigSwapBuffers(display, surface);
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
@@ -57,24 +62,16 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         int hours = 14, minutes = 30;
 
         float scale = 3.5f;
-
-        // Hitung total lebar teks buat centering
-        char tmp[128];
-        snprintf(tmp, sizeof(tmp),
-            "XYZ: %.0f, %.0f, %.0f  |  DAY: %d  [%02d:%02d]",
-            px, py, pz, day, hours, minutes);
-
         float textH = ImGui::CalcTextSize("A").y * scale;
         float barHeight = h * 0.085f;
-        float survivalHeight = h * 0.085f; // naik lebih tinggi
+        float survivalHeight = h * 0.085f;
         float posY = h - barHeight - survivalHeight - textH - 5;
 
-        // Pake ImDrawList buat render teks dengan warna berbeda
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::SetNextWindowPos(ImVec2(0, posY), ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::SetNextWindowSize(ImVec2(w, textH + 20));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("##dc", nullptr,
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoResize |
@@ -90,30 +87,35 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
         ImVec4 white  = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // Hitung total width buat centering
-        float wXYZ    = ImGui::CalcTextSize("XYZ:").x;
-        float wCoord  = ImGui::CalcTextSize(" 100, 64, -200  |  ").x;
-        float wDAY    = ImGui::CalcTextSize("DAY:").x;
-        float wDayVal = ImGui::CalcTextSize(" 5  ").x;
-        float wTime   = ImGui::CalcTextSize("[14:30]").x;
-        float totalW  = (wXYZ + wCoord + wDAY + wDayVal + wTime) * scale;
+        // Hitung total width dulu
+        char coordStr[32], dayStr[8], timeStr[16];
+        snprintf(coordStr, sizeof(coordStr), "%.0f, %.0f, %.0f  |  ", px, py, pz);
+        snprintf(dayStr, sizeof(dayStr), "%d  ", day);
+        snprintf(timeStr, sizeof(timeStr), "[%02d:%02d]", hours, minutes);
 
-        float startX = (w - totalW) / 2.0f;
-        ImGui::SetCursorPosX(startX);
+        float totalW = (
+            ImGui::CalcTextSize("XYZ:").x +
+            ImGui::CalcTextSize(coordStr).x +
+            ImGui::CalcTextSize("DAY:").x +
+            ImGui::CalcTextSize(dayStr).x +
+            ImGui::CalcTextSize(timeStr).x
+        ) * scale;
+
+        ImGui::SetCursorPosX((w - totalW) / 2.0f);
 
         ImGui::TextColored(yellow, "XYZ:");
         ImGui::SameLine(0, 2);
-        ImGui::TextColored(white, "%.0f, %.0f, %.0f  |  ", px, py, pz);
+        ImGui::TextColored(white, "%s", coordStr);
         ImGui::SameLine(0, 2);
         ImGui::TextColored(yellow, "DAY:");
         ImGui::SameLine(0, 2);
-        ImGui::TextColored(white, "%d  ", day);
+        ImGui::TextColored(white, "%s", dayStr);
         ImGui::SameLine(0, 2);
-        ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
+        ImGui::TextColored(white, "%s", timeStr);
 
         ImGui::SetWindowFontScale(1.0f);
-        ImGui::End();
         ImGui::PopStyleVar(2);
+        ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
