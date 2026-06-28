@@ -4,7 +4,7 @@
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <string>
-#include <sstream>
+#include <stdio.h>
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 
@@ -12,57 +12,26 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 typedef bool (*GlossInit_t)(bool);
-typedef void* (*pl_resolve_signature_t)(const char*, const char*);
 typedef int (*GlossHook_t)(void*, void*, void**);
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay, EGLSurface);
 
-typedef struct { float x, y, z; } Vec3;
-
-typedef int (*GetDayCount_t)(void*);
-typedef int (*GetDayTime_t)(void*);
-typedef Vec3 (*GetPlayerPos_t)(void*);
-
 GlossInit_t pGlossInit = nullptr;
-pl_resolve_signature_t pResolve = nullptr;
 GlossHook_t pGlossHook = nullptr;
 eglSwapBuffers_t pOrigSwapBuffers = nullptr;
 
-GetDayCount_t pGetDayCount = nullptr;
-GetDayTime_t pGetDayTime = nullptr;
-GetPlayerPos_t pGetPlayerPos = nullptr;
-
 static bool imguiInitialized = false;
-static int screenW = 1080;
-static int screenH = 1920;
 static int frameCount = 0;
 
-void* gLevel = nullptr;
-
-void initImGui() {
+void initImGui(int w, int h) {
     if (imguiInitialized) return;
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2(screenW, screenH);
+    io.DisplaySize = ImVec2(w, h);
     ImGui::StyleColorsDark();
     ImGui_ImplOpenGL3_Init("#version 100");
     imguiInitialized = true;
-    LOGI("ImGui initialized %dx%d", screenW, screenH);
-}
-
-void initMCBEFunctions() {
-    void* mcbe = dlopen("libminecraftpe.so", RTLD_NOW);
-    if (!mcbe) {
-        LOGI("libminecraftpe open failed");
-        return;
-    }
-    pGetDayCount = (GetDayCount_t)dlsym(mcbe, "_ZN5Level9getDayCountEv");
-    pGetDayTime = (GetDayTime_t)dlsym(mcbe, "_ZN5Level8getDayTimeEv");
-    pGetPlayerPos = (GetPlayerPos_t)dlsym(mcbe, "_ZN11LocalPlayer6getPosEv");
-
-    if (pGetDayCount) LOGI("getDayCount found!");
-    if (pGetDayTime) LOGI("getDayTime found!");
-    if (pGetPlayerPos) LOGI("getPlayerPos found!");
+    LOGI("ImGui initialized %dx%d", w, h);
 }
 
 EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
@@ -71,63 +40,74 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
     EGLint w, h;
     eglQuerySurface(display, surface, EGL_WIDTH, &w);
     eglQuerySurface(display, surface, EGL_HEIGHT, &h);
-    screenW = w; screenH = h;
 
     if (frameCount > 60 && !imguiInitialized) {
-        initImGui();
-        initMCBEFunctions();
+        initImGui(w, h);
     }
 
     if (imguiInitialized) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(w, h);
 
-        bool isInWorld = true;
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui::NewFrame();
 
-        if (isInWorld) {
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui::NewFrame();
+        // Data (hardcoded dulu, nanti ganti dengan data real)
+        float px = 100, py = 64, pz = -200;
+        int day = 5;
+        int hours = 14, minutes = 30;
 
-            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-            ImGui::SetNextWindowBgAlpha(0.7f);
-            ImGui::Begin("##dc", nullptr,
-                ImGuiWindowFlags_NoTitleBar |
-                ImGuiWindowFlags_NoResize |
-                ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_AlwaysAutoResize);
+        char text[128];
+        snprintf(text, sizeof(text),
+            "XYZ: %.0f, %.0f, %.0f  |  DAY: %d  [%02d:%02d]",
+            px, py, pz, day, hours, minutes);
 
-            ImVec4 gold = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
-            ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        // Hitung posisi di atas hotbar
+        // Hotbar sekitar 10% dari bawah layar
+        float hotbarY = h * 0.88f;
 
-            ImGui::SetWindowFontScale(2.0f);
+        ImVec2 textSize = ImGui::CalcTextSize(text);
+        float posX = (w - textSize.x) / 2.0f;
+        float posY = hotbarY - textSize.y - 10;
 
-            int day = 1;
-            int daytime = 6000;
-            float px = 0, py = 64, pz = 0;
+        ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.0f); // No background
+        ImGui::Begin("##dc", nullptr,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoInputs |
+            ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-            if (pGetDayCount && gLevel) day = pGetDayCount(gLevel);
-            if (pGetDayTime && gLevel) daytime = pGetDayTime(gLevel);
+        ImGui::SetWindowFontScale(1.5f);
 
-            int hours = (daytime / 1000) % 24;
-            int minutes = ((daytime % 1000) * 60) / 1000;
+        // XYZ label kuning, nilai putih
+        ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+        ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-            char dayText[32];
-            char coordText[64];
-            char timeText[32];
+        ImGui::TextColored(yellow, "XYZ:");
+        ImGui::SameLine();
+        ImGui::TextColored(white, "%.0f, %.0f, %.0f", px, py, pz);
+        ImGui::SameLine();
+        ImGui::TextColored(white, " | ");
+        ImGui::SameLine();
+        ImGui::TextColored(yellow, "DAY:");
+        ImGui::SameLine();
+        ImGui::TextColored(white, "%d", day);
+        ImGui::SameLine();
+        ImGui::TextColored(white, " [");
+        ImGui::SameLine();
+        ImGui::TextColored(white, "%02d:%02d", hours, minutes);
+        ImGui::SameLine();
+        ImGui::TextColored(white, "]");
 
-            snprintf(dayText, sizeof(dayText), "DAY %d", day);
-            snprintf(coordText, sizeof(coordText), "X: %.0f Y: %.0f Z: %.0f", px, py, pz);
-            snprintf(timeText, sizeof(timeText), "%02d:%02d", hours, minutes);
-
-            ImGui::TextColored(gold, "%s", dayText);
-            ImGui::TextColored(white, "%s", coordText);
-            ImGui::TextColored(white, "%s", timeText);
-
-            ImGui::SetWindowFontScale(1.0f);
-            ImGui::End();
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        }
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
     return pOrigSwapBuffers(display, surface);
@@ -144,7 +124,6 @@ void init() {
     }
 
     pGlossInit = (GlossInit_t)dlsym(preloader, "GlossInit");
-    pResolve = (pl_resolve_signature_t)dlsym(preloader, "pl_resolve_signature");
     pGlossHook = (GlossHook_t)dlsym(preloader, "GlossHook");
 
     if (!pGlossInit) {
@@ -156,19 +135,14 @@ void init() {
 
     void* egl = dlopen("libEGL.so", RTLD_NOW);
     if (!egl) {
-        LOGI("libEGL FAILED: %s", dlerror());
+        LOGI("libEGL FAILED");
         return;
     }
 
     void* swapFunc = dlsym(egl, "eglSwapBuffers");
-    if (!swapFunc) {
-        LOGI("eglSwapBuffers not found!");
-        return;
-    }
-
-    if (pGlossHook) {
-        int result = pGlossHook(swapFunc, (void*)mySwapBuffers, (void**)&pOrigSwapBuffers);
-        LOGI("Hook result: %d", result);
+    if (pGlossHook && swapFunc) {
+        pGlossHook(swapFunc, (void*)mySwapBuffers, (void**)&pOrigSwapBuffers);
+        LOGI("Hook installed!");
     }
 
     LOGI("=== DayCounter LOADED ===");
