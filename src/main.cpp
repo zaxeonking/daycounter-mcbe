@@ -58,22 +58,21 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
 
         float scale = 3.5f;
 
-        char text[128];
-        snprintf(text, sizeof(text),
+        char fullText[128];
+        snprintf(fullText, sizeof(fullText),
             "XYZ: %.0f, %.0f, %.0f  |  DAY: %d  [%02d:%02d]",
             px, py, pz, day, hours, minutes);
 
-        ImVec2 textSize = ImGui::CalcTextSize(text);
-        textSize.x *= scale;
-        textSize.y *= scale;
+        float textW = ImGui::CalcTextSize(fullText).x * scale;
+        float textH = ImGui::CalcTextSize(fullText).y * scale;
 
-        float posX = (w - textSize.x) / 2.0f;
-        float posY = h * 0.75f;
+        float barHeight = h * 0.085f;
+        float survivalHeight = h * 0.05f;
+        float posY = h - barHeight - survivalHeight - textH - 5;
 
         ImGui::SetNextWindowPos(ImVec2(0, posY), ImGuiCond_Always);
-
         ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::SetNextWindowSize(ImVec2(w, textSize.y * scale + 10));
+        ImGui::SetNextWindowSize(ImVec2(w, textH + 10));
         ImGui::Begin("##dc", nullptr,
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoResize |
@@ -83,25 +82,12 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
             ImGuiWindowFlags_NoInputs |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        ImGui::SetWindowFontScale(scale);  
-        ImGui::SetCursorPosX((w - ImGui::CalcTextSize(text).x * scale) / 2.0f);
+        ImGui::SetWindowFontScale(scale);
 
         ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-        ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        
-
-        ImGui::TextColored(yellow, "XYZ:");
-ImGui::SameLine(0, 2);
-ImGui::TextColored(white, "%.0f, %.0f, %.0f", px, py, pz);
-ImGui::SameLine(0, 3);
-ImGui::TextColored(white, "|");
-ImGui::SameLine(0, 3);
-ImGui::TextColored(yellow, "DAY:");
-ImGui::SameLine(0, 2);
-ImGui::TextColored(white, "%d", day);
-ImGui::SameLine(0, 3);
-ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
+        ImGui::SetCursorPosX((w - textW) / 2.0f);
+        ImGui::TextColored(yellow, "%s", fullText);
 
         ImGui::SetWindowFontScale(1.0f);
         ImGui::End();
