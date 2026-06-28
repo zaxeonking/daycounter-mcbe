@@ -16,15 +16,30 @@ typedef void* (*pl_resolve_signature_t)(const char*, const char*);
 typedef int (*GlossHook_t)(void*, void*, void**);
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay, EGLSurface);
 
+// Type definitions untuk MCBE functions
+typedef struct {
+    float x, y, z;
+} Vec3;
+
+typedef int (*GetDayCount_t)(void*);
+typedef int (*GetDayTime_t)(void*);
+typedef Vec3 (*GetPlayerPos_t)(void*);
+
 GlossInit_t pGlossInit = nullptr;
 pl_resolve_signature_t pResolve = nullptr;
 GlossHook_t pGlossHook = nullptr;
 eglSwapBuffers_t pOrigSwapBuffers = nullptr;
 
+GetDayCount_t pGetDayCount = nullptr;
+GetDayTime_t pGetDayTime = nullptr;
+GetPlayerPos_t pGetPlayerPos = nullptr;
+
 static bool imguiInitialized = false;
 static int screenW = 1080;
 static int screenH = 1920;
 static int frameCount = 0;
+
+void* gLevel = nullptr;
 
 void initImGui() {
     if (imguiInitialized) return;
@@ -38,6 +53,23 @@ void initImGui() {
     LOGI("ImGui initialized %dx%d", screenW, screenH);
 }
 
+void initMCBEFunctions() {
+    void* mcbe = dlopen("libminecraftpe.so", RTLD_NOW);
+    if (!mcbe) {
+        LOGI("libminecraftpe open failed");
+        return;
+    }
+
+    // Try cari fungsi pake nama (ini nama C++ yang di-mangle)
+    pGetDayCount = (GetDayCount_t)dlsym(mcbe, "_ZN5Level9getDayCountEv");
+    pGetDayTime = (GetDayTime_t)dlsym(mcbe, "_ZN5Level8getDayTimeEv");
+    pGetPlayerPos = (GetPlayerPos_t)dlsym(mcbe, "_ZN11LocalPlayer6getPosEv");
+
+    if (pGetDayCount) LOGI("getDayCount found!");
+    if (pGetDayTime) LOGI("getDayTime found!");
+    if (pGetPlayerPos) LOGI("getPlayerPos found!");
+}
+
 EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
     frameCount++;
 
@@ -48,32 +80,69 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
 
     if (frameCount > 60 && !imguiInitialized) {
         initImGui();
+        initMCBEFunctions();
     }
 
     if (imguiInitialized) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(w, h);
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui::NewFrame();
+        // Hanya render saat fullscreen (di world)
+        bool isInWorld = (w >= 1080 && h >= 1920);
 
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.5f);
-        ImGui::Begin("##dc", nullptr,
-            ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_AlwaysAutoResize);
+        if (isInWorld) {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui::NewFrame();
 
-        ImVec4 gold = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
-        ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImGui::TextColored(gold, "DAY 1");
-        ImGui::TextColored(white, "X: 0 Y: 64 Z: 0");
-        ImGui::TextColored(white, "06:00");
+            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+            ImGui::SetNextWindowBgAlpha(0.7f);
+            ImGui::Begin("##dc", nullptr,
+                ImGuiWindowFlags_NoTitleBar |
+                ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_AlwaysAutoResize);
 
-        ImGui::End();
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            ImVec4 gold = ImVec4(1.0f, 0.8f, 0.0f, 1.0f);
+            ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+            ImGui::SetWindowFontScale(2.0f);
+
+            // Get data from MCBE
+            int day = 1;
+            int daytime = 6000;
+            float px = 0, py = 64, pz = 0;
+
+            if (pGetDayCount && gLevel) {
+                day = pGetDayCount(gLevel);
+            }
+
+            if (pGetDayTime && gLevel) {
+                daytime = pGetDayTime(gLevel);
+            }
+
+            // Convert daytime to hours:minutes
+            int hours = (daytime / 1000) % 24;
+            int minutes = ((daytime % 1000) / 1000) * 60;
+
+            // Format text
+            char dayText[32];
+            char coordText[64];
+            char timeText[32];
+
+            snprintf(dayText, sizeof(dayText), "DAY %d", day);
+            snprintf(coordText, sizeof(coordText), "X: %.0f Y: %.0f Z: %.0f", px, py, pz);
+            snprintf(timeText, sizeof(timeText), "%02d:%02d", hours, minutes);
+
+            ImGui::TextColored(gold, "%s", dayText);
+            ImGui::TextColored(white, "%s", coordText);
+            ImGui::TextColored(white, "%s", timeText);
+
+            ImGui::SetWindowFontScale(1.0f);
+
+            ImGui::End();
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
     }
 
     return pOrigSwapBuffers(display, surface);
@@ -92,6 +161,7 @@ void init() {
     pGlossInit = (GlossInit_t)dlsym(preloader, "GlossInit");
     pResolve = (pl_resolve_signature_t)dlsym(preloader, "pl_resolve_signature");
     pGlossHook = (GlossHook_t)dlsym(preloader, "GlossHook");
+
     if (!pGlossInit) {
         LOGI("Failed get GlossInit!");
         return;
