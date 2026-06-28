@@ -52,26 +52,27 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
-        // Data (hardcoded dulu, nanti ganti dengan data real)
         float px = 100, py = 64, pz = -200;
         int day = 5;
         int hours = 14, minutes = 30;
+
+        float scale = 2.5f;
 
         char text[128];
         snprintf(text, sizeof(text),
             "XYZ: %.0f, %.0f, %.0f  |  DAY: %d  [%02d:%02d]",
             px, py, pz, day, hours, minutes);
 
-        // Hitung posisi di atas hotbar
-        // Hotbar sekitar 10% dari bawah layar
-        float hotbarY = h * 0.88f;
-
         ImVec2 textSize = ImGui::CalcTextSize(text);
+        textSize.x *= scale;
+        textSize.y *= scale;
+
         float posX = (w - textSize.x) / 2.0f;
-        float posY = hotbarY - textSize.y - 10;
+        float posY = h * 0.70f;
 
         ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.0f); // No background
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::SetNextWindowSize(ImVec2(w, textSize.y + 10));
         ImGui::Begin("##dc", nullptr,
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoResize |
@@ -79,30 +80,28 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
             ImGuiWindowFlags_NoScrollbar |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoInputs |
-            ImGuiWindowFlags_AlwaysAutoResize |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        ImGui::SetWindowFontScale(1.5f);
+        ImGui::SetWindowFontScale(scale);
 
-        // XYZ label kuning, nilai putih
         ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
         ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
+        float windowWidth = ImGui::GetWindowWidth();
+        float cursorX = (windowWidth - textSize.x) / 2.0f;
+        ImGui::SetCursorPosX(cursorX);
+
         ImGui::TextColored(yellow, "XYZ:");
-        ImGui::SameLine();
+        ImGui::SameLine(0, 4);
         ImGui::TextColored(white, "%.0f, %.0f, %.0f", px, py, pz);
-        ImGui::SameLine();
-        ImGui::TextColored(white, " | ");
-        ImGui::SameLine();
+        ImGui::SameLine(0, 8);
+        ImGui::TextColored(white, "|");
+        ImGui::SameLine(0, 8);
         ImGui::TextColored(yellow, "DAY:");
-        ImGui::SameLine();
+        ImGui::SameLine(0, 4);
         ImGui::TextColored(white, "%d", day);
-        ImGui::SameLine();
-        ImGui::TextColored(white, " [");
-        ImGui::SameLine();
-        ImGui::TextColored(white, "%02d:%02d", hours, minutes);
-        ImGui::SameLine();
-        ImGui::TextColored(white, "]");
+        ImGui::SameLine(0, 8);
+        ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
 
         ImGui::SetWindowFontScale(1.0f);
         ImGui::End();
