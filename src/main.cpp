@@ -56,7 +56,7 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         int day = 5;
         int hours = 14, minutes = 30;
 
-        float scale = 2.5f;
+        float scale = 3.5f;
 
         char text[128];
         snprintf(text, sizeof(text),
@@ -68,7 +68,7 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         textSize.y *= scale;
 
         float posX = (w - textSize.x) / 2.0f;
-        float posY = h * 0.70f;
+        float posY = h * 0.75f;
 
         ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.0f);
@@ -92,16 +92,16 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         ImGui::SetCursorPosX(cursorX);
 
         ImGui::TextColored(yellow, "XYZ:");
-        ImGui::SameLine(0, 4);
-        ImGui::TextColored(white, "%.0f, %.0f, %.0f", px, py, pz);
-        ImGui::SameLine(0, 8);
-        ImGui::TextColored(white, "|");
-        ImGui::SameLine(0, 8);
-        ImGui::TextColored(yellow, "DAY:");
-        ImGui::SameLine(0, 4);
-        ImGui::TextColored(white, "%d", day);
-        ImGui::SameLine(0, 8);
-        ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
+ImGui::SameLine(0, 2);
+ImGui::TextColored(white, "%.0f, %.0f, %.0f", px, py, pz);
+ImGui::SameLine(0, 3);
+ImGui::TextColored(white, "|");
+ImGui::SameLine(0, 3);
+ImGui::TextColored(yellow, "DAY:");
+ImGui::SameLine(0, 2);
+ImGui::TextColored(white, "%d", day);
+ImGui::SameLine(0, 3);
+ImGui::TextColored(white, "[%02d:%02d]", hours, minutes);
 
         ImGui::SetWindowFontScale(1.0f);
         ImGui::End();
