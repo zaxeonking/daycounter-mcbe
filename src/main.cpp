@@ -70,9 +70,10 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
         float posX = (w - textSize.x) / 2.0f;
         float posY = h * 0.75f;
 
-        ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(0, posY), ImGuiCond_Always);
+
         ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::SetNextWindowSize(ImVec2(w, textSize.y + 10));
+        ImGui::SetNextWindowSize(ImVec2(w, textSize.y * scale + 10));
         ImGui::Begin("##dc", nullptr,
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoResize |
@@ -82,14 +83,13 @@ EGLBoolean mySwapBuffers(EGLDisplay display, EGLSurface surface) {
             ImGuiWindowFlags_NoInputs |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        ImGui::SetWindowFontScale(scale);
+        ImGui::SetWindowFontScale(scale);  
+        ImGui::SetCursorPosX((w - ImGui::CalcTextSize(text).x * scale) / 2.0f);
 
         ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
         ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        float windowWidth = ImGui::GetWindowWidth();
-        float cursorX = (windowWidth - textSize.x) / 2.0f;
-        ImGui::SetCursorPosX(cursorX);
+        
 
         ImGui::TextColored(yellow, "XYZ:");
 ImGui::SameLine(0, 2);
